@@ -14,8 +14,14 @@ export interface Report {
 }
 
 export interface ConsumeOptions {
-  addr: string;
-  ca: string;
+  /** Required unless `client` is provided. */
+  addr?: string;
+  /** Required unless `client` is provided. */
+  ca?: string;
+  /** Injected DataPlane client (in-process mocks). When set, `addr` and `ca` are unused. */
+  client?: unknown;
+  /** Override channel credentials when creating a client from `addr`/`ca`. */
+  credentials?: unknown;
   token: string;
   groupId: string;
   consumerId: string;
@@ -38,3 +44,4 @@ export class CallError extends Error {
 }
 
 export function consume(options: ConsumeOptions): Promise<Report>;
+export function loadClient(protoPath: string): unknown;

@@ -45,11 +45,17 @@ function consume(options) {
     process.env.DIAVASI_PROTO ||
     path.join(__dirname, "proto/data.proto");
   const DataPlane = loadClient(protoPath);
-  const ca = fs.readFileSync(options.ca);
-  const creds = grpc.credentials.createSsl(ca);
-  const client = new DataPlane(options.addr, creds, {
-    "grpc.ssl_target_name_override": "localhost",
-  });
+  let client = options.client;
+  if (!client) {
+    if (!options.addr || !options.ca) {
+      return Promise.reject(new Error("addr and ca are required unless client is provided"));
+    }
+    const ca = fs.readFileSync(options.ca);
+    const creds = options.credentials || grpc.credentials.createSsl(ca);
+    client = new DataPlane(options.addr, creds, {
+      "grpc.ssl_target_name_override": "localhost",
+    });
+  }
   const meta = new grpc.Metadata();
   meta.add("authorization", `Bearer ${options.token}`);
   const call = client.Consume(meta);
@@ -159,4 +165,4 @@ function consume(options) {
   });
 }
 
-module.exports = { ProtocolError, CallError, consume };
+module.exports = { ProtocolError, CallError, consume, loadClient };

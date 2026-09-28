@@ -1,5 +1,16 @@
 "use strict";
 
+/**
+ * Integration tests against a live diavasi data plane.
+ *
+ * Skipped unless DIAVASI_DATA_ADDR, DIAVASI_CA, and DIAVASI_API_TOKEN are set.
+ * Default group is `sdk` (not `demo`). A finished synthetic group hangs until
+ * the process is interrupted — recreate/start the group before each run.
+ *
+ *   npm run test:integration
+ */
+
+const assert = require("node:assert/strict");
 const test = require("node:test");
 const { ProtocolError, consume } = require("../index");
 
@@ -13,7 +24,7 @@ function configured() {
   return { addr, ca, token };
 }
 
-test("consume acks every batch", async (t) => {
+test("integration: consume acks every batch", async (t) => {
   const env = configured();
   if (!env) {
     t.skip("DIAVASI_DATA_ADDR, DIAVASI_CA, and DIAVASI_API_TOKEN are unset");
@@ -31,7 +42,7 @@ test("consume acks every batch", async (t) => {
   }
 });
 
-test("missing group is not running", async (t) => {
+test("integration: missing group is not running", async (t) => {
   const env = configured();
   if (!env) {
     t.skip("DIAVASI_DATA_ADDR, DIAVASI_CA, and DIAVASI_API_TOKEN are unset");
@@ -46,5 +57,3 @@ test("missing group is not running", async (t) => {
     (err) => err instanceof ProtocolError && err.code === 5
   );
 });
-
-const assert = require("node:assert/strict");

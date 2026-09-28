@@ -9,10 +9,15 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test test/mock*.test.js",
+    "test:integration": "node --test test/integration*.test.js",
+    "test:coverage": "c8 --reporter=text --reporter=lcov node --test test/mock*.test.js"
   },
   "dependencies": {
     "@grpc/grpc-js": "1.12.6",
     "@grpc/proto-loader": "0.7.13"
+  },
+  "devDependencies": {
+    "c8": "10.1.3"
   }
 }

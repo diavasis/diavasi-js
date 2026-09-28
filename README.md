@@ -6,7 +6,7 @@
 
 `@diavasi/data` is a thin client of `diavasi.data.v1`, built on `@grpc/grpc-js`. `consume` opens a TLS stream, sends the bearer token, Hello version 1, then JoinGroup, and acks each batch. The client stores no cursor and does not dedupe on `record_id`. A dropped stream is how unacked batches return. Reconnect with the same consumer id and the server replays them.
 
-`proto/data.proto` in this repository is the copy of `diavasi.data.v1` from [github.com/diavasis/diavasi](https://github.com/diavasis/diavasi) tag `v0.12.0`. The npm package `@diavasi/data` is version 0.1.0. TypeScript types are in `index.d.ts`.
+`proto/data.proto` in this repository is the copy of `diavasi.data.v1` from [github.com/diavasis/diavasi](https://github.com/diavasis/diavasi) tag `v0.13.0`. The npm package `@diavasi/data` is version 0.1.0. TypeScript types are in `index.d.ts`.
 
 ## Install
 
@@ -58,7 +58,7 @@ try {
 Start the server from the repo root:
 
 ```bash
-cargo build -p diavasi-cli
+cargo build -p diavasi
 export PATH="$PWD/target/debug:$PATH"
 mkdir -p /tmp/diavasi-sdk
 diavasi serve --bind 127.0.0.1:7700 --data-bind 127.0.0.1:7710 \
@@ -68,6 +68,8 @@ diavasi serve --bind 127.0.0.1:7700 --data-bind 127.0.0.1:7710 \
 In a second terminal, from the repo root:
 
 ```bash
+curl -fsS -X POST -H "Authorization: Bearer sdk-demo" \
+  http://127.0.0.1:7700/v1/groups/demo/pause || true
 curl -fsS -X DELETE -H "Authorization: Bearer sdk-demo" \
   http://127.0.0.1:7700/v1/groups/demo || true
 curl -fsS -H "Authorization: Bearer sdk-demo" -H "content-type: application/json" \
@@ -79,6 +81,8 @@ curl -fsS -X POST -H "Authorization: Bearer sdk-demo" \
 npm install
 node examples/process.js
 ```
+
+Pause, delete, create, and start the group before another run. Delete returns 409 while it is running, and start resumes the cursor. A finished synthetic group leaves the client waiting on heartbeats.
 
 `examples/process.js` is the program above. `examples/consume.js` is the flag client used by the compatibility suite:
 
@@ -95,4 +99,50 @@ docker compose -f clients/docker-compose.yml --profile js up --abort-on-containe
 
 ## Test
 
-`node --test` skips until `DIAVASI_DATA_ADDR`, `DIAVASI_CA`, and `DIAVASI_API_TOKEN` are set. With those set, it consumes `DIAVASI_TOTAL` records (default 8) from `DIAVASI_GROUP`.
+There is no compile step. Install dependencies, then run the mock suite (always, no server):
+
+```bash
+npm install
+npm test
+```
+
+`npm test` runs `node --test` on `test/mock*.test.js`. Those tests drive `consume` against an in-process fake `DataPlane`: a fresh group returns record ids 1 through 8, `sdk-missing` is protocol error 5, and a bearer token of `bad-token` is `UNAUTHENTICATED`. CI runs this suite only.
+
+Coverage over the mock suite (via [c8](https://github.com/bcoe/c8)):
+
+```bash
+npm run test:coverage
+```
+
+### Integration (live data plane)
+
+`npm run test:integration` runs `test/integration*.test.js`. When `DIAVASI_DATA_ADDR`, `DIAVASI_CA`, and `DIAVASI_API_TOKEN` are **unset**, both tests skip immediately. If those variables are set (including leftovers from an earlier session), the suite does **not** skip: the first test joins `DIAVASI_GROUP` (default **`sdk`**, not `demo`) as consumer `js-test` and waits for `DIAVASI_TOTAL` records (default 8). A wrong group name, a finished synthetic group, or a group that never starts leaves the command blocked on heartbeats until you Ctrl+C.
+
+Skip without clearing your shell permanently:
+
+```bash
+env -u DIAVASI_DATA_ADDR -u DIAVASI_CA -u DIAVASI_API_TOKEN npm run test:integration
+```
+
+Live-server run against a fresh group (match the group id you create):
+
+```bash
+curl -fsS -X POST -H "Authorization: Bearer sdk-demo" \
+  http://127.0.0.1:7700/v1/groups/sdk/pause || true
+curl -fsS -X DELETE -H "Authorization: Bearer sdk-demo" \
+  http://127.0.0.1:7700/v1/groups/sdk || true
+curl -fsS -H "Authorization: Bearer sdk-demo" -H "content-type: application/json" \
+  -d '{"group_id":"sdk","total_records":8,"payload_size":8,"max_buffer_records":64,"max_buffer_bytes":65536,"batch_max_records":4,"batch_timeout_ms":200,"ordering_contract":"synthetic-u64"}' \
+  http://127.0.0.1:7700/v1/groups
+curl -fsS -X POST -H "Authorization: Bearer sdk-demo" \
+  http://127.0.0.1:7700/v1/groups/sdk/start
+
+export DIAVASI_DATA_ADDR=127.0.0.1:7710
+export DIAVASI_CA=/tmp/diavasi-sdk/dataplane-ca.crt
+export DIAVASI_API_TOKEN=sdk-demo
+export DIAVASI_GROUP=sdk
+export DIAVASI_TOTAL=8
+npm run test:integration
+```
+
+Pause, delete, create, and start the group before another live run. The second test joins `sdk-missing` and expects protocol error 5.
