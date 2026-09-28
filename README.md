@@ -1,17 +1,17 @@
 # JavaScript client
 
 [![CI](https://github.com/diavasis/diavasi-js/actions/workflows/ci.yml/badge.svg)](https://github.com/diavasis/diavasi-js/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@diavasi/data.svg)](https://www.npmjs.com/package/@diavasi/data)
+[![npm](https://img.shields.io/npm/v/@diavasi/client.svg)](https://www.npmjs.com/package/@diavasi/client)
 [![license](https://img.shields.io/github/license/diavasis/diavasi-js)](https://github.com/diavasis/diavasi-js/blob/main/LICENSE)
 
-`@diavasi/data` is a thin client of `diavasi.data.v1`, built on `@grpc/grpc-js`. `consume` opens a TLS stream, sends the bearer token, Hello version 1, then JoinGroup, and acks each batch. The client stores no cursor and does not dedupe on `record_id`. A dropped stream is how unacked batches return. Reconnect with the same consumer id and the server replays them.
+`@diavasi/client` is a thin client of `diavasi.data.v1`, built on `@grpc/grpc-js`. `consume` opens a TLS stream, sends the bearer token, Hello version 1, then JoinGroup, and acks each batch. The client stores no cursor and does not dedupe on `record_id`. A dropped stream is how unacked batches return. Reconnect with the same consumer id and the server replays them.
 
-`proto/data.proto` in this repository is the copy of `diavasi.data.v1` from [github.com/diavasis/diavasi](https://github.com/diavasis/diavasi) tag `v0.13.0`. The npm package `@diavasi/data` is version 0.1.0. TypeScript types are in `index.d.ts`.
+`proto/data.proto` in this repository is the copy of `diavasi.data.v1` from [github.com/diavasis/diavasi](https://github.com/diavasis/diavasi) tag `v0.13.0`. The npm package `@diavasi/client` is version 0.1.0. TypeScript types are in `index.d.ts`.
 
 ## Install
 
 ```bash
-npm install @diavasi/data@0.1.0
+npm install @diavasi/client@0.1.0
 ```
 
 From a checkout of this repository, `npm install` installs the gRPC dependencies used by the example.
@@ -19,7 +19,7 @@ From a checkout of this repository, `npm install` installs the gRPC dependencies
 ## Library
 
 ```js
-const { CallError, ProtocolError, consume } = require("@diavasi/data");
+const { CallError, ProtocolError, consume } = require("@diavasi/client");
 
 try {
   const report = await consume({
